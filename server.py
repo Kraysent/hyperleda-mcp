@@ -1,31 +1,44 @@
 from hyperleda import data
-import hyperleda
-from mcp.server import fastmcp
+import fastmcp
 
-mcp = fastmcp.FastMCP("hyperleda")
+mcp = fastmcp.FastMCP(
+    "HyperLEDA",
+    instructions="""
+    This server provides functionality to work with extragalactic objects.
+""",
+)
+
+
+@mcp.tool(tags=["objects"])
+async def get_object_by_id(pgc: int) -> str:
+    """Get extragalactic object details by PGC number.
+
+    Args:
+        pgc: PGC number of the object.
+    """
+
+    client = data.HyperLedaDataClient()
+    resp = client.query_simple(data.QuerySimpleRequestSchema(pgcs=[pgc]))
+
+    return resp.model_dump_json()
 
 
 @mcp.tool()
-async def get_objects_num(ra: float, dec: float, radius: float) -> int | str:
-    """Returns a number of galactic objects inside a given radius
-    around given coordinates. If there was an error, it will return a string containing the description of the error.
+async def get_objects(ra: float, dec: float, radius: float) -> str:
+    """Search for extragalactic objects within a circular region.
 
     Args:
-        ra: J2000 right ascension of the position in degrees.
-        dec: J2000 declination of the position in degrees.
-        radius: Radius, in which objects will be counted, in degrees.
+        ra: Right ascension in degrees (0-360)
+        dec: Declination in degrees (-90 to +90)
+        radius: Search radius in degrees
     """
 
-    client = data.HyperLedaDataClient(hyperleda.PROD_ENDPOINT)
-    try:
-        d = client.query_simple(
-            data.QuerySimpleRequestSchema(ra=ra, dec=dec, radius=radius, page_size=25)
-        )
-    except Exception as e:
-        print(str(e))
-        return str(e)
+    client = data.HyperLedaDataClient()
+    resp = client.query_simple(
+        data.QuerySimpleRequestSchema(ra=ra, dec=dec, radius=radius)
+    )
 
-    return len(d.objects)
+    return resp.model_dump_json()
 
 
 if __name__ == "__main__":
